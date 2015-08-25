@@ -784,7 +784,6 @@ intel_process_dri2_buffer(struct intel_context *intel,
 	      buffer->cpp, buffer->pitch);
    }
 
-   intel_miptree_release(&rb->mt);
    region = intel_region_alloc_for_handle(intel->intelScreen,
                                           buffer->cpp,
                                           drawable->w,
@@ -795,6 +794,7 @@ intel_process_dri2_buffer(struct intel_context *intel,
    if (!region)
       return;
 
+   intel_miptree_release(&rb->mt);
    rb->mt = intel_miptree_create_for_dri2_buffer(intel,
                                                  buffer->attachment,
                                                  intel_rb_format(rb),
