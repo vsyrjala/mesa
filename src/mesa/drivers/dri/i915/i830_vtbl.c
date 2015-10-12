@@ -395,6 +395,7 @@ get_state_size(struct i830_hw_state *state)
       sz += sizeof(state->Buffer);
       sz += 2 * 4; /* color and depth relocs */
       sz += 7; /* cacheline alignment */
+      sz += 4; /* MI_FLUSH */
    }
 
    if (dirty & I830_UPLOAD_STIPPLE)
@@ -494,7 +495,7 @@ i830_emit_state(struct intel_context *intel)
    }
 
    if (dirty & I830_UPLOAD_BUFFERS) {
-      GLuint count = 15;
+      GLuint count = 16;
 
       DBG("I830_UPLOAD_BUFFERS:\n");
 
@@ -517,6 +518,8 @@ i830_emit_state(struct intel_context *intel)
          OUT_RELOC(state->depth_region->bo,
 		   I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, 0);
       }
+
+      OUT_BATCH(MI_FLUSH);
 
       OUT_BATCH(state->Buffer[I830_DESTREG_DV0]);
       OUT_BATCH(state->Buffer[I830_DESTREG_DV1]);
