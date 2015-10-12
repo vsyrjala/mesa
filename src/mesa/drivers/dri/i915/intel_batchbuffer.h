@@ -116,6 +116,22 @@ intel_batchbuffer_begin(struct intel_context *intel, int n)
 }
 
 static inline void
+intel_batchbuffer_begin_aligned(struct intel_context *intel, int n, int align)
+{
+   int extra = (align - (intel->batch.used & (align - 1))) & (align - 1);
+
+   intel_batchbuffer_require_space(intel, (n + extra) * 4);
+
+   intel->batch.emit = intel->batch.used;
+#ifdef DEBUG
+   intel->batch.total = n + extra;
+#endif
+
+   while (extra--)
+      intel_batchbuffer_emit_dword(intel, MI_NOOP);
+}
+
+static inline void
 intel_batchbuffer_advance(struct intel_context *intel)
 {
 #ifdef DEBUG
@@ -138,6 +154,7 @@ intel_batchbuffer_advance(struct intel_context *intel)
 #define BATCH_LOCALS
 
 #define BEGIN_BATCH(n) intel_batchbuffer_begin(intel, n)
+#define BEGIN_BATCH_ALIGNED(n, align) intel_batchbuffer_begin_aligned(intel, n, align)
 #define OUT_BATCH(d) intel_batchbuffer_emit_dword(intel, d)
 #define OUT_BATCH_F(f) intel_batchbuffer_emit_float(intel,f)
 #define OUT_RELOC(buf, read_domains, write_domain, delta) do {		\

@@ -394,6 +394,7 @@ get_state_size(struct i830_hw_state *state)
    if (dirty & I830_UPLOAD_BUFFERS) {
       sz += sizeof(state->Buffer);
       sz += 2 * 4; /* color and depth relocs */
+      sz += 7; /* cacheline alignment */
    }
 
    if (dirty & I830_UPLOAD_STIPPLE)
@@ -500,7 +501,11 @@ i830_emit_state(struct intel_context *intel)
       if (state->depth_region)
           count += 3;
 
-      BEGIN_BATCH(count);
+      /* WA_3DSTATE_BUFFER_INFO_CACHELINE:alm
+       * Gen2 BSpec 1.4.7 3DSTATE_BUFFER_INFO
+       * All 3DSTATE_BUFFER_INFO instructions must be 32-byte aligned.
+       */
+      BEGIN_BATCH_ALIGNED(count, 8);
       OUT_BATCH(state->Buffer[I830_DESTREG_CBUFADDR0]);
       OUT_BATCH(state->Buffer[I830_DESTREG_CBUFADDR1]);
       OUT_RELOC(state->draw_region->bo,
