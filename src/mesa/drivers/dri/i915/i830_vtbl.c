@@ -391,15 +391,19 @@ get_state_size(struct i830_hw_state *state)
    if (dirty & I830_UPLOAD_CTX)
       sz += sizeof(state->Ctx);
 
-   if (dirty & I830_UPLOAD_BUFFERS)
+   if (dirty & I830_UPLOAD_BUFFERS) {
       sz += sizeof(state->Buffer);
+      sz += 2 * 4; /* color and depth relocs */
+   }
 
    if (dirty & I830_UPLOAD_STIPPLE)
       sz += sizeof(state->Stipple);
 
    for (i = 0; i < I830_TEX_UNITS; i++) {
-      if ((dirty & I830_UPLOAD_TEX(i)))
+      if ((dirty & I830_UPLOAD_TEX(i))) {
          sz += sizeof(state->Tex[i]);
+         sz += 4; /* tex reloc */
+      }
 
       if (dirty & I830_UPLOAD_TEXBLEND(i))
          sz += state->TexBlendWordsUsed[i] * 4;
