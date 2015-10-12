@@ -382,6 +382,9 @@ get_state_size(struct i830_hw_state *state)
    GLuint sz = 0;
    GLuint i;
 
+   if (dirty)
+      sz += 4; /* MI_FLUSH */
+
    if (dirty & I830_UPLOAD_INVARIENT)
       sz += 40 * sizeof(int);
 
@@ -477,6 +480,12 @@ i830_emit_state(struct intel_context *intel)
    dirty = get_dirty(state);
    state->emitted |= dirty;
    assert(get_dirty(state) == 0);
+
+   if (dirty) {
+      BEGIN_BATCH(1);
+      OUT_BATCH(MI_FLUSH);
+      ADVANCE_BATCH();
+   }
 
    if (dirty & I830_UPLOAD_INVARIENT) {
       DBG("I830_UPLOAD_INVARIENT:\n");
