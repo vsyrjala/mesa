@@ -162,6 +162,8 @@ _intel_batchbuffer_flush(struct intel_context *intel,
    if (intel->vtbl.finish_batch)
       intel->vtbl.finish_batch(intel);
 
+   intel_batchbuffer_emit_dword(intel, MI_FLUSH);
+
    /* Mark the end of the buffer. */
    intel_batchbuffer_emit_dword(intel, MI_BATCH_BUFFER_END);
    if (intel->batch.used & 1) {
