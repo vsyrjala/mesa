@@ -169,8 +169,8 @@ intel_renderbuffer_format(struct gl_context * ctx, GLenum internalFormat)
                                                    GL_NONE, GL_NONE);
 
    case GL_DEPTH_COMPONENT16:
-      return MESA_FORMAT_Z_UNORM16;
    case GL_DEPTH_COMPONENT:
+      return MESA_FORMAT_Z_UNORM16;
    case GL_DEPTH_COMPONENT24:
    case GL_DEPTH_COMPONENT32:
       return MESA_FORMAT_Z24_UNORM_X8_UINT;
