@@ -545,6 +545,7 @@ intelInitContext(struct intel_context *intel,
       fprintf(stderr, "flushing GPU caches before/after each draw call\n");
       intel->always_flush_cache = 1;
    }
+   intel->always_flush_cache = 1;
 
    if (driQueryOptionb(&intel->optionCache, "disable_throttling")) {
       fprintf(stderr, "disabling flush throttling\n");
