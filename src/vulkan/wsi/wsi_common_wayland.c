@@ -36,6 +36,7 @@
 #include "wsi_common_wayland.h"
 #include "wayland-drm-client-protocol.h"
 #include "colorspace-unstable-v1-client-protocol.h"
+#include "hdr-metadata-unstable-v1-client-protocol.h"
 
 #include <util/hash_table.h>
 #include <util/u_vector.h>
@@ -55,6 +56,7 @@ struct wsi_wl_display {
    struct wl_event_queue *                      queue;
    struct wl_drm *                              drm;
    struct zwp_colorspace_v1 *                   colorspace;
+   struct zwp_hdr_metadata_v1 *                 hdr_metadata;
 
    struct wsi_wayland *wsi_wl;
    /* Vector of VkFormats supported */
@@ -245,6 +247,11 @@ registry_handle_global(void *data, struct wl_registry *registry,
          wl_registry_bind(registry, name, &zwp_colorspace_v1_interface,
                           MIN2(version, 1));
    }
+   else if (strcmp(interface, "zwp_hdr_metadta_v1") == 0 && version >= 1) {
+      display->hdr_metadata =
+         wl_registry_bind(registry, name, &zwp_hdr_metadata_v1_interface,
+                          MIN2(version, 1));
+   }
 }
 
 static void
@@ -267,6 +274,8 @@ wsi_wl_display_finish(struct wsi_wl_display *display)
       wl_drm_destroy(display->drm);
    if (display->colorspace)
       zwp_colorspace_v1_destroy(display->colorspace);
+   if (display->hdr_metadata)
+      zwp_hdr_metadata_v1_destroy(display->hdr_metadata);
    if (display->wl_display_wrapper)
       wl_proxy_wrapper_destroy(display->wl_display_wrapper);
    if (display->queue)
@@ -874,6 +883,48 @@ get_colorspace(enum VkColorSpaceKHR colorspace)
    return NULL;
 }
 
+static uint16_t encode_xyy(float xy)
+{
+   return xy * 50000;
+}
+
+static uint16_t encode_max(float max)
+{
+   return max;
+}
+
+static uint16_t encode_min(float min)
+{
+   return min * 10000;
+}
+
+static void
+wsi_wl_set_hdr_metadata(struct wsi_swapchain *wsi_chain,
+                        const VkHdrMetadataEXT *metadata)
+{
+   struct wsi_wl_swapchain *chain = (struct wsi_wl_swapchain *)wsi_chain;
+   const struct wsi_colorspace *cs;
+
+   cs = get_colorspace(chain->vk_colorspace);
+   if (!cs)
+      return; /* FIXME */
+
+   zwp_hdr_metadata_v1_set(chain->display->hdr_metadata,
+                           chain->surface,
+                           encode_xyy(metadata->displayPrimaryRed.x),
+                           encode_xyy(metadata->displayPrimaryRed.y),
+                           encode_xyy(metadata->displayPrimaryGreen.x),
+                           encode_xyy(metadata->displayPrimaryGreen.y),
+                           encode_xyy(metadata->displayPrimaryBlue.x),
+                           encode_xyy(metadata->displayPrimaryBlue.y),
+                           encode_xyy(metadata->whitePoint.x),
+                           encode_xyy(metadata->whitePoint.x),
+                           encode_max(metadata->maxLuminance),
+                           encode_min(metadata->minLuminance),
+                           encode_max(metadata->maxContentLightLevel),
+                           encode_max(metadata->maxFrameAverageLightLevel));
+}
+
 static VkResult
 wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
                                 VkDevice device,
@@ -928,6 +979,9 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    chain->vk_format = pCreateInfo->imageFormat;
    chain->vk_colorspace = pCreateInfo->imageColorSpace;
    chain->drm_format = wl_drm_format_for_vk_format(chain->vk_format, alpha);
+
+   if (chain->display->hdr_metadata)
+      chain->base.set_hdr_metadata = wsi_wl_set_hdr_metadata;
 
    if (pCreateInfo->oldSwapchain) {
       /* If we have an oldSwapchain parameter, copy the display struct over

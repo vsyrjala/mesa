@@ -65,6 +65,8 @@ struct wsi_swapchain {
    VkResult (*queue_present)(struct wsi_swapchain *swap_chain,
                              uint32_t image_index,
                              const VkPresentRegionKHR *damage);
+   void (*set_hdr_metadata)(struct wsi_swapchain *swapchain,
+                            const VkHdrMetadataEXT *metadata);
 };
 
 VkResult

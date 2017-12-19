@@ -55,6 +55,8 @@ if with_platform_wayland
     wayland_drm_client_protocol_h,
     wayland_colorspace_client_protocol_h,
     wayland_colorspace_protocol_c,
+    wayland_hdr_metadata_client_protocol_h,
+    wayland_hdr_metadata_protocol_c,
     wayland_drm_protocol_c,
   ]
 endif

@@ -77,6 +77,16 @@ wsi/colorspace-unstable-v1-client-protocol.h : $(WL_COLORSPACE_XML)
 	$(MKDIR_GEN)
 	$(AM_V_GEN)$(WAYLAND_SCANNER) client-header < $< > $@
 
+WL_HDR_METADATA_XML = $(WAYLAND_PROTOCOLS_DATADIR)/unstable/hdr-metadata/hdr-metadata-unstable-v1.xml
+
+wsi/hdr-metadata-unstable-v1-protocol.c : $(WL_HDR_METADATA_XML)
+	$(MKDIR_GEN)
+	$(AM_V_GEN)$(WAYLAND_SCANNER) code < $< > $@
+
+wsi/hdr-metadata-unstable-v1-client-protocol.h : $(WL_HDR_METADATA_XML)
+	$(MKDIR_GEN)
+	$(AM_V_GEN)$(WAYLAND_SCANNER) client-header < $< > $@
+
 if HAVE_PLATFORM_WAYLAND
 AM_CPPFLAGS += \
 	-I$(top_builddir)/src/vulkan/wsi \

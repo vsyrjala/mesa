@@ -633,6 +633,18 @@ wsi_common_destroy_swapchain(VkDevice device,
    swapchain->destroy(swapchain, pAllocator);
 }
 
+void
+wsi_common_set_hdr_metadata(uint32_t swapchainCount,
+                            const VkSwapchainKHR *pSwapchain,
+                            const VkHdrMetadataEXT *pMetadata)
+{
+   for (uint32_t i = 0; i < swapchainCount; i++) {
+      WSI_FROM_HANDLE(wsi_swapchain, swapchain, pSwapchain[i]);
+
+      swapchain->set_hdr_metadata(swapchain, &pMetadata[i]);
+   }
+}
+
 VkResult
 wsi_common_get_images(VkSwapchainKHR _swapchain,
                       uint32_t *pSwapchainImageCount,

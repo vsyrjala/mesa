@@ -179,6 +179,11 @@ wsi_common_destroy_swapchain(VkDevice device,
                              VkSwapchainKHR swapchain,
                              const VkAllocationCallbacks *pAllocator);
 
+void
+wsi_common_set_hdr_metadata(uint32_t swapchainCount,
+                            const VkSwapchainKHR* pSwapchains,
+                            const VkHdrMetadataEXT* pMetadata);
+
 VkResult
 wsi_common_queue_present(const struct wsi_device *wsi,
                          VkDevice device_h,
