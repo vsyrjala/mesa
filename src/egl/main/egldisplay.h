@@ -101,6 +101,12 @@ struct _egl_extensions
 
    EGLBoolean EXT_buffer_age;
    EGLBoolean EXT_create_context_robustness;
+   EGLBoolean EXT_gl_colorspace_bt2020_linear;
+   EGLBoolean EXT_gl_colorspace_bt2020_pq;
+   EGLBoolean EXT_gl_colorspace_display_p3;
+   EGLBoolean EXT_gl_colorspace_display_p3_linear;
+   EGLBoolean EXT_gl_colorspace_scrgb;
+   EGLBoolean EXT_gl_colorspace_scrgb_linear;
    EGLBoolean EXT_image_dma_buf_import;
    EGLBoolean EXT_image_dma_buf_import_modifiers;
    EGLBoolean EXT_pixel_format_float;

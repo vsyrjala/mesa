@@ -44,10 +44,12 @@
 #include "loader.h"
 #include "util/u_vector.h"
 #include "eglglobals.h"
+#include "EGL/egl.h"
 
 #include <wayland-client.h>
 #include "wayland-drm-client-protocol.h"
 #include "linux-dmabuf-unstable-v1-client-protocol.h"
+#include "colorspace-unstable-v1-client-protocol.h"
 
 #ifndef DRM_FORMAT_MOD_INVALID
 #define DRM_FORMAT_MOD_INVALID ((1ULL << 56) - 1)
@@ -121,6 +123,68 @@ get_wl_surface_proxy(struct wl_egl_window *window)
       return wl_proxy_create_wrapper((void *)(window->version));
    }
    return wl_proxy_create_wrapper(window->surface);
+}
+
+struct egl_colorspace {
+   EGLenum colorspace;
+   enum zwp_colorspace_v1_chromacities chromacities;
+   enum zwp_colorspace_v1_transfer_func transfer_func;
+};
+
+
+static const struct egl_colorspace colorspaces[] = {
+   {
+      .colorspace = EGL_GL_COLORSPACE_LINEAR_KHR,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_BT709,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_LINEAR,
+   },
+   {
+      .colorspace = EGL_GL_COLORSPACE_SRGB_KHR,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_BT709,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_SRGB,
+   },
+   {
+      .colorspace = EGL_GL_COLORSPACE_DISPLAY_P3_EXT,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_DCI_P3,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_SRGB,
+   },
+   {
+      .colorspace = EGL_GL_COLORSPACE_DISPLAY_P3_LINEAR_EXT,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_DCI_P3,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_LINEAR,
+   },
+   {
+      .colorspace = EGL_GL_COLORSPACE_BT2020_LINEAR_EXT,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_BT2020,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_LINEAR,
+   },
+   {
+      .colorspace = EGL_GL_COLORSPACE_BT2020_PQ_EXT,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_BT2020,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_ST2084,
+   },
+   {
+      .colorspace = EGL_GL_COLORSPACE_SCRGB_EXT,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_BT709,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_SRGB,
+   },
+   {
+      .colorspace = EGL_GL_COLORSPACE_SCRGB_LINEAR_EXT,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_BT709,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_LINEAR,
+   },
+};
+
+static const struct egl_colorspace *
+get_colorspace(EGLenum colorspace)
+{
+   int i;
+
+   for (i = 0; i < ARRAY_SIZE(colorspaces); i++) {
+      if (colorspaces[i].colorspace == colorspace)
+         return &colorspaces[i];
+   }
+   return NULL;
 }
 
 /**
@@ -203,6 +267,18 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
    }
    wl_proxy_set_queue((struct wl_proxy *)dri2_surf->wl_surface_wrapper,
                       dri2_surf->wl_queue);
+
+   if (dri2_dpy->wl_colorspace) {
+      const struct egl_colorspace *cs =
+         get_colorspace(dri2_surf->base.GLColorspace);
+      if (!cs)
+         goto cleanup_dpy_wrapper;
+
+      zwp_colorspace_v1_set(dri2_dpy->wl_colorspace,
+                            window->surface,
+                            cs->chromacities,
+                            cs->transfer_func);
+   }
 
    dri2_surf->wl_win = window;
    dri2_surf->wl_win->private = dri2_surf;
@@ -1204,7 +1280,10 @@ registry_handle_global_drm(void *data, struct wl_registry *registry,
                           MIN2(version, 3));
       zwp_linux_dmabuf_v1_add_listener(dri2_dpy->wl_dmabuf, &dmabuf_listener,
                                        dri2_dpy);
-   }
+   } else if (strcmp(interface, "zwp_colorspace_v1") == 0 && version >= 1) {
+      dri2_dpy->wl_colorspace =
+         wl_registry_bind(registry, name, &zwp_colorspace_v1_interface,
+                          MIN2(version, 1));
 }
 
 static void
@@ -2071,6 +2150,8 @@ dri2_teardown_wayland(struct dri2_egl_display *dri2_dpy)
       wl_drm_destroy(dri2_dpy->wl_drm);
    if (dri2_dpy->wl_dmabuf)
       zwp_linux_dmabuf_v1_destroy(dri2_dpy->wl_dmabuf);
+   if (dri2_dpy->wl_colorspace)
+      zwp_colorspace_v1_destroy(dri2_dpy->wl_colorspace);
    if (dri2_dpy->wl_shm)
       wl_shm_destroy(dri2_dpy->wl_shm);
    if (dri2_dpy->wl_registry)

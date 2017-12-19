@@ -701,6 +701,16 @@ dri2_setup_screen(_EGLDisplay *disp)
                                    __DRI2_RENDERER_HAS_FRAMEBUFFER_SRGB))
       disp->Extensions.KHR_gl_colorspace = EGL_TRUE;
 
+   /* FIXME */
+   if (disp->Extensions.KHR_gl_colorspace) {
+      disp->Extensions.EXT_gl_colorspace_bt2020_linear = EGL_TRUE;
+      disp->Extensions.EXT_gl_colorspace_bt2020_pq = EGL_TRUE;
+      disp->Extensions.EXT_gl_colorspace_display_p3 = EGL_TRUE;
+      disp->Extensions.EXT_gl_colorspace_display_p3_linear = EGL_TRUE;
+      disp->Extensions.EXT_gl_colorspace_scrgb = EGL_TRUE;
+      disp->Extensions.EXT_gl_colorspace_scrgb_linear = EGL_TRUE;
+   }
+
    if (dri2_dpy->image_driver ||
        (dri2_dpy->dri2 && dri2_dpy->dri2->base.version >= 3) ||
        (dri2_dpy->swrast && dri2_dpy->swrast->base.version >= 3)) {

@@ -485,6 +485,12 @@ _eglCreateExtensionsString(_EGLDisplay *dpy)
 
    _EGL_CHECK_EXTENSION(EXT_buffer_age);
    _EGL_CHECK_EXTENSION(EXT_create_context_robustness);
+   _EGL_CHECK_EXTENSION(EXT_gl_colorspace_bt2020_linear);
+   _EGL_CHECK_EXTENSION(EXT_gl_colorspace_bt2020_pq);
+   _EGL_CHECK_EXTENSION(EXT_gl_colorspace_display_p3);
+   _EGL_CHECK_EXTENSION(EXT_gl_colorspace_display_p3_linear);
+   _EGL_CHECK_EXTENSION(EXT_gl_colorspace_scrgb);
+   _EGL_CHECK_EXTENSION(EXT_gl_colorspace_scrgb_linear);
    _EGL_CHECK_EXTENSION(EXT_image_dma_buf_import);
    _EGL_CHECK_EXTENSION(EXT_image_dma_buf_import_modifiers);
    _EGL_CHECK_EXTENSION(EXT_swap_buffers_with_damage);

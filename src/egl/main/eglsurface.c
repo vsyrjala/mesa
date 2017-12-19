@@ -76,6 +76,42 @@ _eglParseSurfaceAttribList(_EGLSurface *surf, const EGLint *attrib_list)
             break;
          }
          switch (val) {
+         case EGL_GL_COLORSPACE_BT2020_LINEAR_EXT:
+            if (!dpy->Extensions.EXT_gl_colorspace_bt2020_linear) {
+               err = EGL_BAD_MATCH;
+               break;
+            }
+            break;
+         case EGL_GL_COLORSPACE_BT2020_PQ_EXT:
+            if (!dpy->Extensions.EXT_gl_colorspace_bt2020_pq) {
+               err = EGL_BAD_MATCH;
+               break;
+            }
+            break;
+         case EGL_GL_COLORSPACE_DISPLAY_P3_EXT:
+            if (!dpy->Extensions.EXT_gl_colorspace_display_p3) {
+               err = EGL_BAD_MATCH;
+               break;
+            }
+            break;
+         case EGL_GL_COLORSPACE_DISPLAY_P3_LINEAR_EXT:
+            if (!dpy->Extensions.EXT_gl_colorspace_display_p3_linear) {
+               err = EGL_BAD_MATCH;
+               break;
+            }
+            break;
+         case EGL_GL_COLORSPACE_SCRGB_EXT:
+            if (!dpy->Extensions.EXT_gl_colorspace_scrgb) {
+               err = EGL_BAD_MATCH;
+               break;
+            }
+            break;
+         case EGL_GL_COLORSPACE_SCRGB_LINEAR_EXT:
+            if (!dpy->Extensions.EXT_gl_colorspace_scrgb_linear) {
+               err = EGL_BAD_MATCH;
+               break;
+            }
+            break;
          case EGL_GL_COLORSPACE_SRGB_KHR:
          case EGL_GL_COLORSPACE_LINEAR_KHR:
             break;

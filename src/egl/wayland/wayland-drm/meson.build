@@ -34,6 +34,20 @@ wayland_drm_client_protocol_h = custom_target(
   command : [prog_wl_scanner, 'client-header', '@INPUT@', '@OUTPUT@'],
 )
 
+wayland_colorspace_protocol_c = custom_target(
+  'colorspace-unstable-v1-protocol.c',
+  input : wayland_colorspace_xml,
+  output : 'colorspace-unstable-v1-protocol.c',
+  command : [prog_wl_scanner, 'code', '@INPUT@', '@OUTPUT@'],
+)
+
+wayland_colorspace_client_protocol_h = custom_target(
+  'colorspace-unstable-v1-client-protocol.h',
+  input : wayland_colorspace_xml,
+  output : 'colorspace-unstable-v1-client-protocol.h',
+  command : [prog_wl_scanner, 'client-header', '@INPUT@', '@OUTPUT@'],
+)
+
 wayland_drm_server_protocol_h = custom_target(
   'wayland-drm-server-protocol.h',
   input : 'wayland-drm.xml',
@@ -43,7 +57,9 @@ wayland_drm_server_protocol_h = custom_target(
 
 libwayland_drm = static_library(
   'wayland_drm',
-  ['wayland-drm.c', wayland_drm_protocol_c, wayland_drm_server_protocol_h],
+  ['wayland-drm.c', wayland_drm_protocol_c,
+   wayland_colorspace_protocol_c,
+   wayland_drm_server_protocol_h],
   c_args : c_vis_args,
   dependencies : [dep_wayland_server],
   build_by_default : false,

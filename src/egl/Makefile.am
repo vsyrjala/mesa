@@ -77,7 +77,18 @@ drivers/dri2/linux-dmabuf-unstable-v1-client-protocol.h: $(WL_DMABUF_XML)
 	$(MKDIR_GEN)
 	$(AM_V_GEN)$(WAYLAND_SCANNER) client-header < $< > $@
 
+WL_COLORSPACE_XML = $(WAYLAND_PROTOCOLS_DATADIR)/unstable/colorspace/colorspace-unstable-v1.xml
+
+drivers/dri2/colorspace-unstable-v1-protocol.c: $(WL_COLORSPACE_XML)
+	$(MKDIR_GEN)
+	$(AM_V_GEN)$(WAYLAND_SCANNER) code < $< > $@
+
+drivers/dri2/colorspace-unstable-v1-client-protocol.h: $(WL_COLORSPACE_XML)
+	$(MKDIR_GEN)
+	$(AM_V_GEN)$(WAYLAND_SCANNER) client-header < $< > $@
+
 if HAVE_PLATFORM_WAYLAND
+drivers/dri2/colorspace-unstable-v1-protocol.lo: drivers/dri2/colorspace-unstable-v1-client-protocol.h
 drivers/dri2/linux-dmabuf-unstable-v1-protocol.lo: drivers/dri2/linux-dmabuf-unstable-v1-client-protocol.h
 drivers/dri2/egl_dri2.lo: drivers/dri2/linux-dmabuf-unstable-v1-client-protocol.h
 
@@ -90,7 +101,9 @@ libEGL_common_la_LIBADD += $(WAYLAND_SERVER_LIBS)
 dri2_backend_FILES += \
 	drivers/dri2/platform_wayland.c	\
 	drivers/dri2/linux-dmabuf-unstable-v1-protocol.c \
-	drivers/dri2/linux-dmabuf-unstable-v1-client-protocol.h
+	drivers/dri2/linux-dmabuf-unstable-v1-client-protocol.h \
+	drivers/dri2/colorspace-unstable-v1-protocol.c \
+	drivers/dri2/colorspace-unstable-v1-client-protocol.h
 endif
 
 if HAVE_PLATFORM_DRM
