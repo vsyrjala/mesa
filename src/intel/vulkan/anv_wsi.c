@@ -175,6 +175,15 @@ void anv_DestroySwapchainKHR(
    wsi_common_destroy_swapchain(_device, swapchain, alloc);
 }
 
+void anv_SetHdrMetadataEXT(
+   VkDevice                                      device,
+   uint32_t                                      swapchainCount,
+   const VkSwapchainKHR*                         pSwapchains,
+   const VkHdrMetadataEXT*                       pMetadata)
+{
+   wsi_common_set_hdr_metadata(swapchainCount, pSwapchains, pMetadata);
+}
+
 VkResult anv_GetSwapchainImagesKHR(
     VkDevice                                     device,
     VkSwapchainKHR                               swapchain,

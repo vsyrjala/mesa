@@ -88,6 +88,7 @@ EXTENSIONS = [
     Extension('VK_KHX_multiview',                         1, True),
     Extension('VK_EXT_debug_report',                      8, True),
     Extension('VK_EXT_external_memory_dma_buf',           1, True),
+    Extension('VK_EXT_hdr_metadata',                      1, True),
 ]
 
 class VkVersion:
