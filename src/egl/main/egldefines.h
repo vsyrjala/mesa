@@ -40,7 +40,7 @@
 extern "C" {
 #endif
 
-#define _EGL_MAX_EXTENSIONS_LEN 1000
+#define _EGL_MAX_EXTENSIONS_LEN 2000
 
 /* Hardcoded, conservative default for EGL_LARGEST_PBUFFER,
  * this is used to implement EGL_LARGEST_PBUFFER.
