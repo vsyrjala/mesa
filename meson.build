@@ -1075,6 +1075,10 @@ if with_platform_wayland
     dep_wl_protocols.get_pkgconfig_variable('pkgdatadir'), 'unstable',
     'colorspace', 'colorspace-unstable-v1.xml'
   )
+  wayland_hdr_metadata_xml = join_paths(
+    dep_wl_protocols.get_pkgconfig_variable('pkgdatadir'), 'unstable',
+    'hdr-metadata', 'hdr-metadata-unstable-v1.xml'
+  )
   pre_args += ['-DHAVE_WAYLAND_PLATFORM', '-DWL_HIDE_DEPRECATED']
 else
   prog_wl_scanner = []

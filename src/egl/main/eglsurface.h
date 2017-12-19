@@ -41,6 +41,23 @@
 extern "C" {
 #endif
 
+struct _egl_xyy
+{
+   uint16_t x, y;
+};
+
+struct _egl_hdr_metadata
+{
+   struct _egl_xyy display_primary_r;
+   struct _egl_xyy display_primary_g;
+   struct _egl_xyy display_primary_b;
+   struct _egl_xyy white_point;
+   uint16_t max_luminance;
+   uint16_t min_luminance;
+   uint16_t max_cll;
+   uint16_t max_fall;
+};
+
 /**
  * "Base" class for device driver surfaces.
  */
@@ -53,6 +70,8 @@ struct _egl_surface
    _EGLContext *CurrentContext;
 
    _EGLConfig *Config;
+
+   struct _egl_hdr_metadata HdrMetadata;
 
    EGLint Type; /* one of EGL_WINDOW_BIT, EGL_PIXMAP_BIT or EGL_PBUFFER_BIT */
 

@@ -709,6 +709,9 @@ dri2_setup_screen(_EGLDisplay *disp)
       disp->Extensions.EXT_gl_colorspace_display_p3_linear = EGL_TRUE;
       disp->Extensions.EXT_gl_colorspace_scrgb = EGL_TRUE;
       disp->Extensions.EXT_gl_colorspace_scrgb_linear = EGL_TRUE;
+
+      disp->Extensions.EXT_surface_SMPTE2086_metadata = EGL_TRUE;
+      disp->Extensions.EXT_surface_CTA861_3_metadata = EGL_TRUE;
    }
 
    if (dri2_dpy->image_driver ||

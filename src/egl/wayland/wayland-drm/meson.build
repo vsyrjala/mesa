@@ -48,6 +48,20 @@ wayland_colorspace_client_protocol_h = custom_target(
   command : [prog_wl_scanner, 'client-header', '@INPUT@', '@OUTPUT@'],
 )
 
+wayland_hdr_metadata_protocol_c = custom_target(
+  'hdr-metadata-unstable-v1-protocol.c',
+  input : wayland_hdr_metadata_xml,
+  output : 'hdr-metadata-unstable-v1-protocol.c',
+  command : [prog_wl_scanner, 'code', '@INPUT@', '@OUTPUT@'],
+)
+
+wayland_hdr_metadata_client_protocol_h = custom_target(
+  'hdr-metadata-unstable-v1-client-protocol.h',
+  input : wayland_hdr_metadata_xml,
+  output : 'hdr-metadata-unstable-v1-client-protocol.h',
+  command : [prog_wl_scanner, 'client-header', '@INPUT@', '@OUTPUT@'],
+)
+
 wayland_drm_server_protocol_h = custom_target(
   'wayland-drm-server-protocol.h',
   input : 'wayland-drm.xml',
@@ -59,6 +73,7 @@ libwayland_drm = static_library(
   'wayland_drm',
   ['wayland-drm.c', wayland_drm_protocol_c,
    wayland_colorspace_protocol_c,
+   wayland_hdr_metadata_protocol_c,
    wayland_drm_server_protocol_h],
   c_args : c_vis_args,
   dependencies : [dep_wayland_server],

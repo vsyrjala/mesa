@@ -122,6 +122,90 @@ _eglParseSurfaceAttribList(_EGLSurface *surf, const EGLint *attrib_list)
             break;
          surf->GLColorspace = val;
          break;
+      case EGL_SMPTE2086_DISPLAY_PRIMARY_RX_EXT:
+         if (!dpy->Extensions.EXT_surface_SMPTE2086_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.display_primary_r.x = val;
+         break;
+      case EGL_SMPTE2086_DISPLAY_PRIMARY_RY_EXT:
+         if (!dpy->Extensions.EXT_surface_SMPTE2086_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.display_primary_r.y = val;
+         break;
+      case EGL_SMPTE2086_DISPLAY_PRIMARY_GX_EXT:
+         if (!dpy->Extensions.EXT_surface_SMPTE2086_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.display_primary_g.x = val;
+         break;
+      case EGL_SMPTE2086_DISPLAY_PRIMARY_GY_EXT:
+         if (!dpy->Extensions.EXT_surface_SMPTE2086_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.display_primary_g.y = val;
+         break;
+      case EGL_SMPTE2086_DISPLAY_PRIMARY_BX_EXT:
+         if (!dpy->Extensions.EXT_surface_SMPTE2086_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.display_primary_b.x = val;
+         break;
+      case EGL_SMPTE2086_DISPLAY_PRIMARY_BY_EXT:
+         if (!dpy->Extensions.EXT_surface_SMPTE2086_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.display_primary_b.y = val;
+         break;
+      case EGL_SMPTE2086_WHITE_POINT_X_EXT:
+         if (!dpy->Extensions.EXT_surface_SMPTE2086_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.white_point.x = val;
+         break;
+      case EGL_SMPTE2086_WHITE_POINT_Y_EXT:
+         if (!dpy->Extensions.EXT_surface_SMPTE2086_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.white_point.y = val;
+         break;
+      case EGL_SMPTE2086_MAX_LUMINANCE_EXT:
+         if (!dpy->Extensions.EXT_surface_SMPTE2086_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.max_luminance = val;
+         break;
+      case EGL_SMPTE2086_MIN_LUMINANCE_EXT:
+         if (!dpy->Extensions.EXT_surface_SMPTE2086_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.min_luminance = val;
+         break;
+      case EGL_CTA861_3_MAX_CONTENT_LIGHT_LEVEL_EXT:
+         if (!dpy->Extensions.EXT_surface_CTA861_3_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.max_cll = val;
+         break;
+      case EGL_CTA861_3_MAX_FRAME_AVERAGE_LEVEL_EXT:
+         if (!dpy->Extensions.EXT_surface_CTA861_3_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.max_fall = val;
+         break;
       case EGL_VG_COLORSPACE:
          switch (val) {
          case EGL_VG_COLORSPACE_sRGB:
@@ -340,6 +424,19 @@ _eglInitSurface(_EGLSurface *surf, _EGLDisplay *dpy, EGLint type,
 
    /* the default swap interval is 1 */
    surf->SwapInterval = 1;
+
+   surf->HdrMetadata.display_primary_r.x = EGL_DONT_CARE;
+   surf->HdrMetadata.display_primary_r.y = EGL_DONT_CARE;
+   surf->HdrMetadata.display_primary_g.x = EGL_DONT_CARE;
+   surf->HdrMetadata.display_primary_g.y = EGL_DONT_CARE;
+   surf->HdrMetadata.display_primary_b.x = EGL_DONT_CARE;
+   surf->HdrMetadata.display_primary_b.y = EGL_DONT_CARE;
+   surf->HdrMetadata.white_point.x = EGL_DONT_CARE;
+   surf->HdrMetadata.white_point.y = EGL_DONT_CARE;
+   surf->HdrMetadata.max_luminance = EGL_DONT_CARE;
+   surf->HdrMetadata.min_luminance = EGL_DONT_CARE;
+   surf->HdrMetadata.max_cll = EGL_DONT_CARE;
+   surf->HdrMetadata.max_fall = EGL_DONT_CARE;
 
    err = _eglParseSurfaceAttribList(surf, attrib_list);
    if (err != EGL_SUCCESS)

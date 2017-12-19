@@ -50,6 +50,7 @@
 #include "wayland-drm-client-protocol.h"
 #include "linux-dmabuf-unstable-v1-client-protocol.h"
 #include "colorspace-unstable-v1-client-protocol.h"
+#include "hdr-metadata-unstable-v1-client-protocol.h"
 
 #ifndef DRM_FORMAT_MOD_INVALID
 #define DRM_FORMAT_MOD_INVALID ((1ULL << 56) - 1)
@@ -187,6 +188,22 @@ get_colorspace(EGLenum colorspace)
    return NULL;
 }
 
+static bool hdr_metadata_is_valid(const struct _egl_hdr_metadata *metadata)
+{
+   return metadata->display_primary_r.x != EGL_DONT_CARE &&
+      metadata->display_primary_r.y != EGL_DONT_CARE &&
+      metadata->display_primary_g.x != EGL_DONT_CARE &&
+      metadata->display_primary_g.y != EGL_DONT_CARE &&
+      metadata->display_primary_b.x != EGL_DONT_CARE &&
+      metadata->display_primary_b.y != EGL_DONT_CARE &&
+      metadata->white_point.x != EGL_DONT_CARE &&
+      metadata->max_luminance != EGL_DONT_CARE &&
+      metadata->min_luminance != EGL_DONT_CARE &&
+      metadata->max_cll != EGL_DONT_CARE &&
+      metadata->max_fall != EGL_DONT_CARE;
+}
+
+
 /**
  * Called via eglCreateWindowSurface(), drv->API.CreateWindowSurface().
  */
@@ -278,6 +295,44 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
                             window->surface,
                             cs->chromacities,
                             cs->transfer_func);
+   }
+
+   if (dri2_dpy->wl_hdr_metadata) {
+      struct _egl_hdr_metadata metadata =
+         dri2_surf->base.HdrMetadata;
+      const struct egl_colorspace *cs;
+
+      cs = get_colorspace(dri2_surf->base.GLColorspace);
+      if (!cs)
+         goto cleanup_dpy_wrapper;
+
+      if (!hdr_metadata_is_valid(&metadata))
+         goto cleanup_dpy_wrapper;
+
+      /* the EGL extension doesn't match CTA 861.3 :( */
+      metadata.max_luminance =
+         metadata.max_luminance * 65535 / 50000;
+      metadata.min_luminance =
+         metadata.min_luminance * 65535 / 50000 / 10000;
+      metadata.max_cll =
+         metadata.max_cll * 65535 / 50000;
+      metadata.max_fall =
+         metadata.max_fall * 65535 / 50000;
+
+      zwp_hdr_metadata_v1_set(dri2_dpy->wl_hdr_metadata,
+                              window->surface,
+                              metadata.display_primary_r.x,
+                              metadata.display_primary_r.y,
+                              metadata.display_primary_g.x,
+                              metadata.display_primary_g.y,
+                              metadata.display_primary_b.x,
+                              metadata.display_primary_b.y,
+                              metadata.white_point.x,
+                              metadata.white_point.y,
+                              metadata.min_luminance,
+                              metadata.max_luminance,
+                              metadata.max_cll,
+                              metadata.max_fall);
    }
 
    dri2_surf->wl_win = window;
@@ -1284,6 +1339,11 @@ registry_handle_global_drm(void *data, struct wl_registry *registry,
       dri2_dpy->wl_colorspace =
          wl_registry_bind(registry, name, &zwp_colorspace_v1_interface,
                           MIN2(version, 1));
+   } else if (strcmp(interface, "zwp_hdr_metadata_v1") == 0 && version >= 1) {
+      dri2_dpy->wl_hdr_metadata =
+         wl_registry_bind(registry, name, &zwp_hdr_metadata_v1_interface,
+                          MIN2(version, 1));
+   }
 }
 
 static void
@@ -2152,6 +2212,8 @@ dri2_teardown_wayland(struct dri2_egl_display *dri2_dpy)
       zwp_linux_dmabuf_v1_destroy(dri2_dpy->wl_dmabuf);
    if (dri2_dpy->wl_colorspace)
       zwp_colorspace_v1_destroy(dri2_dpy->wl_colorspace);
+   if (dri2_dpy->wl_hdr_metadata)
+      zwp_hdr_metadata_v1_destroy(dri2_dpy->wl_hdr_metadata);
    if (dri2_dpy->wl_shm)
       wl_shm_destroy(dri2_dpy->wl_shm);
    if (dri2_dpy->wl_registry)
