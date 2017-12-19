@@ -5306,8 +5306,6 @@ _mesa_get_texbuffer_format(const struct gl_context *ctx, GLenum internalFormat)
    case GL_RGBA8:
       return MESA_FORMAT_R8G8B8A8_UNORM;
    case GL_RGBA16:
-      if (_mesa_is_gles(ctx))
-         return MESA_FORMAT_NONE;
       return MESA_FORMAT_RGBA_UNORM16;
    case GL_RGBA16F_ARB:
       return MESA_FORMAT_RGBA_FLOAT16;
@@ -5329,8 +5327,6 @@ _mesa_get_texbuffer_format(const struct gl_context *ctx, GLenum internalFormat)
    case GL_RG8:
       return MESA_FORMAT_R8G8_UNORM;
    case GL_RG16:
-      if (_mesa_is_gles(ctx))
-         return MESA_FORMAT_NONE;
       return MESA_FORMAT_R16G16_UNORM;
    case GL_RG16F:
       return MESA_FORMAT_RG_FLOAT16;
@@ -5352,8 +5348,6 @@ _mesa_get_texbuffer_format(const struct gl_context *ctx, GLenum internalFormat)
    case GL_R8:
       return MESA_FORMAT_R_UNORM8;
    case GL_R16:
-      if (_mesa_is_gles(ctx))
-         return MESA_FORMAT_NONE;
       return MESA_FORMAT_R_UNORM16;
    case GL_R16F:
       return MESA_FORMAT_R_FLOAT16;

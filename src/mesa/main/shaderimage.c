@@ -440,7 +440,7 @@ _mesa_is_shader_image_format_supported(const struct gl_context *ctx,
    case GL_RG16_SNORM:
    case GL_R16:
    case GL_R16_SNORM:
-      return _mesa_is_desktop_gl(ctx);
+      return true;
 
    default:
       return false;

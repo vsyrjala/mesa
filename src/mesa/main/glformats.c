@@ -2723,8 +2723,18 @@ _mesa_es3_effective_internal_format_for_format_and_type(GLenum format,
       break;
 
    case GL_UNSIGNED_SHORT:
-      if (format == GL_DEPTH_COMPONENT)
+      switch (format) {
+      case GL_RGBA:
+         return GL_RGBA16;
+      case GL_RGB:
+         return GL_RGB16;
+      case GL_RG:
+         return GL_RG16;
+      case GL_RED:
+         return GL_R16;
+      case GL_DEPTH_COMPONENT:
          return GL_DEPTH_COMPONENT16;
+      }
       break;
 
    case GL_UNSIGNED_INT:
@@ -3115,6 +3125,16 @@ _mesa_es3_error_check_format_and_type(const struct gl_context *ctx,
             return GL_INVALID_OPERATION;
          break;
 
+      case GL_UNSIGNED_SHORT:
+         if (internalFormat != GL_RG16)
+            return GL_INVALID_OPERATION;
+         break;
+
+      case GL_SHORT:
+         if (internalFormat != GL_RG16_SNORM)
+            return GL_INVALID_OPERATION;
+         break;
+
       case GL_HALF_FLOAT:
       case GL_HALF_FLOAT_OES:
          switch (internalFormat) {
@@ -3202,6 +3222,16 @@ _mesa_es3_error_check_format_and_type(const struct gl_context *ctx,
 
       case GL_BYTE:
          if (internalFormat != GL_R8_SNORM)
+            return GL_INVALID_OPERATION;
+         break;
+
+      case GL_UNSIGNED_SHORT:
+         if (internalFormat != GL_R16)
+            return GL_INVALID_OPERATION;
+         break;
+
+      case GL_SHORT:
+         if (internalFormat != GL_R16_SNORM)
             return GL_INVALID_OPERATION;
          break;
 
@@ -3777,6 +3807,9 @@ _mesa_is_es3_texture_filterable(const struct gl_context *ctx,
    case GL_RGBA16F:
    case GL_R11F_G11F_B10F:
    case GL_RGB9_E5:
+      return true;
+   case GL_R16:
+   case GL_RG16:
       return true;
    case GL_R32F:
    case GL_RG32F:
