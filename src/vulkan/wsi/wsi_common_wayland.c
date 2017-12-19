@@ -35,6 +35,7 @@
 #include "wsi_common_private.h"
 #include "wsi_common_wayland.h"
 #include "wayland-drm-client-protocol.h"
+#include "colorspace-unstable-v1-client-protocol.h"
 
 #include <util/hash_table.h>
 #include <util/u_vector.h>
@@ -53,6 +54,7 @@ struct wsi_wl_display {
    struct wl_display *                          wl_display_wrapper;
    struct wl_event_queue *                      queue;
    struct wl_drm *                              drm;
+   struct zwp_colorspace_v1 *                   colorspace;
 
    struct wsi_wayland *wsi_wl;
    /* Vector of VkFormats supported */
@@ -238,6 +240,11 @@ registry_handle_global(void *data, struct wl_registry *registry,
       if (display->drm)
          wl_drm_add_listener(display->drm, &drm_listener, display);
    }
+   else if (strcmp(interface, "zwp_colorspace_v1") == 0 && version >= 1) {
+      display->colorspace =
+         wl_registry_bind(registry, name, &zwp_colorspace_v1_interface,
+                          MIN2(version, 1));
+   }
 }
 
 static void
@@ -258,6 +265,8 @@ wsi_wl_display_finish(struct wsi_wl_display *display)
    u_vector_finish(&display->formats);
    if (display->drm)
       wl_drm_destroy(display->drm);
+   if (display->colorspace)
+      zwp_colorspace_v1_destroy(display->colorspace);
    if (display->wl_display_wrapper)
       wl_proxy_wrapper_destroy(display->wl_display_wrapper);
    if (display->queue)
@@ -479,6 +488,10 @@ wsi_wl_surface_get_formats(VkIcdSurfaceBase *icd_surface,
          out_fmt->format = *disp_fmt;
          out_fmt->colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
       }
+      vk_outarray_append(&out, out_fmt) {
+         out_fmt->format = *disp_fmt;
+         out_fmt->colorSpace = VK_COLORSPACE_HDR10_ST2084_KHR;
+      }
    }
 
    wsi_wl_display_finish(&display);
@@ -508,6 +521,10 @@ wsi_wl_surface_get_formats2(VkIcdSurfaceBase *icd_surface,
       vk_outarray_append(&out, out_fmt) {
          out_fmt->surfaceFormat.format = *disp_fmt;
          out_fmt->surfaceFormat.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+      }
+      vk_outarray_append(&out, out_fmt) {
+         out_fmt->surfaceFormat.format = *disp_fmt;
+         out_fmt->surfaceFormat.colorSpace = VK_COLORSPACE_HDR10_ST2084_KHR;
       }
    }
 
@@ -573,6 +590,7 @@ struct wsi_wl_swapchain {
 
    VkExtent2D                                   extent;
    VkFormat                                     vk_format;
+   VkColorSpaceKHR                              vk_colorspace;
    uint32_t                                     drm_format;
 
    VkPresentModeKHR                             present_mode;
@@ -765,6 +783,97 @@ wsi_wl_swapchain_destroy(struct wsi_swapchain *wsi_chain,
    return VK_SUCCESS;
 }
 
+struct wsi_colorspace {
+   VkColorSpaceKHR colorspace;
+   enum zwp_colorspace_v1_chromacities chromacities;
+   enum zwp_colorspace_v1_transfer_func transfer_func;
+};
+
+static const struct wsi_colorspace colorspaces[] = {
+   {
+      .colorspace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_BT709,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_SRGB,
+   },
+   {
+      .colorspace = VK_COLOR_SPACE_DISPLAY_P3_NONLINEAR_EXT,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_DCI_P3,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_SRGB,
+   },
+   {
+      .colorspace = VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_BT709,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_LINEAR,
+   },
+   {
+      .colorspace = VK_COLOR_SPACE_DCI_P3_LINEAR_EXT,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_DCI_P3,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_LINEAR,
+   },
+   {
+      .colorspace = VK_COLOR_SPACE_DCI_P3_NONLINEAR_EXT,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_DCI_P3,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_DCI_P3,
+   },
+   {
+      .colorspace = VK_COLOR_SPACE_BT709_LINEAR_EXT,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_BT709,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_LINEAR,
+   },
+   {
+      .colorspace = VK_COLOR_SPACE_BT709_NONLINEAR_EXT,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_BT709,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_BT709,
+   },
+   {
+      .colorspace = VK_COLOR_SPACE_BT2020_LINEAR_EXT,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_BT2020,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_LINEAR,
+   },
+   {
+      .colorspace = VK_COLOR_SPACE_HDR10_ST2084_EXT,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_BT2020,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_ST2084,
+   },
+   {
+      .colorspace = VK_COLOR_SPACE_DOLBYVISION_EXT,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_BT2020,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_ST2084,
+   },
+   {
+      .colorspace = VK_COLOR_SPACE_HDR10_HLG_EXT,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_BT2020,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_HLG,
+   },
+   {
+      .colorspace = VK_COLOR_SPACE_ADOBERGB_LINEAR_EXT,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_ADOBERGB,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_LINEAR,
+   },
+   {
+      .colorspace = VK_COLOR_SPACE_ADOBERGB_NONLINEAR_EXT,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_ADOBERGB,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_ADOBERGB,
+   },
+   {
+      .colorspace = VK_COLOR_SPACE_EXTENDED_SRGB_NONLINEAR_EXT,
+      .chromacities = ZWP_COLORSPACE_V1_CHROMACITIES_BT709,
+      .transfer_func = ZWP_COLORSPACE_V1_TRANSFER_FUNC_SRGB,
+   },
+};
+
+static const struct wsi_colorspace *
+get_colorspace(enum VkColorSpaceKHR colorspace)
+{
+   int i;
+
+   for (i = 0; i < ARRAY_SIZE(colorspaces); i++) {
+      if (colorspaces[i].colorspace == colorspace)
+         return &colorspaces[i];
+   }
+   return NULL;
+}
+
 static VkResult
 wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
                                 VkDevice device,
@@ -817,6 +926,7 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    chain->base.image_count = num_images;
    chain->extent = pCreateInfo->imageExtent;
    chain->vk_format = pCreateInfo->imageFormat;
+   chain->vk_colorspace = pCreateInfo->imageColorSpace;
    chain->drm_format = wl_drm_format_for_vk_format(chain->vk_format, alpha);
 
    if (pCreateInfo->oldSwapchain) {
@@ -857,6 +967,19 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
       if (result != VK_SUCCESS)
          goto fail;
       chain->images[i].busy = false;
+   }
+
+   if (chain->display->colorspace) {
+      const struct wsi_colorspace *cs;
+
+      cs = get_colorspace(chain->vk_colorspace);
+      if (!cs)
+         goto fail;
+
+      zwp_colorspace_v1_set(chain->display->colorspace,
+                            surface->surface,
+                            cs->chromacities,
+                            cs->transfer_func);
    }
 
    *swapchain_out = &chain->base;

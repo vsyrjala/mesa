@@ -53,6 +53,8 @@ if with_platform_wayland
   )
   files_vulkan_wsi += [
     wayland_drm_client_protocol_h,
+    wayland_colorspace_client_protocol_h,
+    wayland_colorspace_protocol_c,
     wayland_drm_protocol_c,
   ]
 endif

@@ -67,6 +67,16 @@ wsi/wayland-drm-client-protocol.h : $(WL_DRM_XML)
 	$(MKDIR_GEN)
 	$(AM_V_GEN)$(WAYLAND_SCANNER) client-header < $< > $@
 
+WL_COLORSPACE_XML = $(WAYLAND_PROTOCOLS_DATADIR)/unstable/colorspace/colorspace-unstable-v1.xml
+
+wsi/colorspace-unstable-v1-protocol.c : $(WL_COLORSPACE_XML)
+	$(MKDIR_GEN)
+	$(AM_V_GEN)$(WAYLAND_SCANNER) code < $< > $@
+
+wsi/colorspace-unstable-v1-client-protocol.h : $(WL_COLORSPACE_XML)
+	$(MKDIR_GEN)
+	$(AM_V_GEN)$(WAYLAND_SCANNER) client-header < $< > $@
+
 if HAVE_PLATFORM_WAYLAND
 AM_CPPFLAGS += \
 	-I$(top_builddir)/src/vulkan/wsi \
