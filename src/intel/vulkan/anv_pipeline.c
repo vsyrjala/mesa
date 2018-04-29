@@ -965,7 +965,7 @@ anv_pipeline_compile_graphics(struct anv_pipeline *pipeline,
 
       stages[s].bind_map = (struct anv_pipeline_bind_map) {
          .surface_to_descriptor = stages[s].surface_to_descriptor,
-         .sampler_to_descriptor = stages[s].sampler_to_descriptor
+         .sampler_to_descriptor = stages[s].sampler_to_descriptor,
       };
 
       stages[s].nir = anv_shader_compile_to_nir(pipeline, pipeline_ctx,
@@ -1131,7 +1131,7 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
    if (bin == NULL) {
       stage.bind_map = (struct anv_pipeline_bind_map) {
          .surface_to_descriptor = stage.surface_to_descriptor,
-         .sampler_to_descriptor = stage.sampler_to_descriptor
+         .sampler_to_descriptor = stage.sampler_to_descriptor,
       };
 
       void *mem_ctx = ralloc_context(NULL);

@@ -51,6 +51,7 @@ extern "C" {
 
 struct gen_device_info;
 struct brw_image_param;
+struct brw_sampled_image_param;
 
 #ifndef ISL_DEV_GEN
 /**
@@ -1846,6 +1847,12 @@ isl_buffer_fill_image_param(const struct isl_device *dev,
                             struct brw_image_param *param,
                             enum isl_format format,
                             uint64_t size);
+
+void
+isl_surf_fill_sampled_image_param(const struct isl_device *dev,
+                                  struct brw_sampled_image_param *param,
+                                  const struct isl_surf *surf,
+                                  const struct isl_view *view);
 
 /**
  * Alignment of the upper-left sample of each subimage, in units of surface

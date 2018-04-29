@@ -34,6 +34,7 @@ struct apply_pipeline_layout_state {
    bool add_bounds_checks;
 
    unsigned first_image_uniform;
+   unsigned first_sampled_image_uniform;
 
    bool uses_constants;
    uint8_t constants_offset;
@@ -42,6 +43,7 @@ struct apply_pipeline_layout_state {
       uint8_t *surface_offsets;
       uint8_t *sampler_offsets;
       uint8_t *image_offsets;
+      uint8_t *sampled_image_offsets;
    } set[MAX_SETS];
 };
 
@@ -266,14 +268,14 @@ lower_load_constant(nir_intrinsic_instr *intrin,
    nir_instr_remove(&intrin->instr);
 }
 
-static void
+static nir_variable *
 lower_tex_deref(nir_tex_instr *tex, nir_tex_src_type deref_src_type,
                 unsigned *base_index,
                 struct apply_pipeline_layout_state *state)
 {
    int deref_src_idx = nir_tex_instr_src_index(tex, deref_src_type);
    if (deref_src_idx < 0)
-      return;
+      return NULL;
 
    nir_deref_instr *deref = nir_src_as_deref(tex->src[deref_src_idx].src);
    nir_variable *var = nir_deref_instr_get_variable(deref);
@@ -326,6 +328,7 @@ lower_tex_deref(nir_tex_instr *tex, nir_tex_src_type deref_src_type,
    } else {
       nir_tex_instr_remove_src(tex, deref_src_idx);
    }
+   return var;
 }
 
 static uint32_t
@@ -342,13 +345,84 @@ tex_instr_get_and_remove_plane_src(nir_tex_instr *tex)
    return plane;
 }
 
-static void
-lower_tex(nir_tex_instr *tex, struct apply_pipeline_layout_state *state)
+static nir_ssa_def *
+load_param(nir_builder *build, nir_ssa_def *offset, int index)
+{
+   nir_intrinsic_instr *load =
+      nir_intrinsic_instr_create(build->shader, nir_intrinsic_load_uniform);
+   load->num_components = 1;
+   load->src[0] = nir_src_for_ssa(offset);
+   nir_ssa_dest_init(&load->instr, &load->dest, 1, 32, NULL);
+   nir_intrinsic_set_base(load, index * sizeof(uint32_t));
+   nir_builder_instr_insert(build, &load->instr);
+
+   return &load->dest.ssa;
+}
+
+static void lower_tex_swizzle(nir_tex_instr *tex,
+                              nir_variable *var,
+                              struct apply_pipeline_layout_state *state)
+{
+   assert(tex->dest.is_ssa);
+
+   /* FIXME: correct? */
+   if (tex->op >= nir_texop_txs)
+      return;
+
+   if (!var)
+      return;
+
+   unsigned set = var->data.descriptor_set;
+   unsigned binding = var->data.binding;
+   unsigned texture = state->set[set].sampled_image_offsets[binding];
+
+   nir_builder *b = &state->builder;
+   b->cursor = nir_after_instr(&tex->instr);
+
+   nir_ssa_def *tex_offset = nir_imm_int(b, texture);
+
+   int i = nir_tex_instr_src_index(tex, nir_tex_src_texture_offset);
+   if (i > 0) {
+      nir_ssa_def *src = nir_ssa_for_src(b, tex->src[i].src, 1);
+      tex_offset = nir_iadd(b, tex_offset, src);
+   }
+
+   tex_offset = nir_imul(b, tex_offset,
+                         nir_imm_int(b, BRW_SAMPLED_IMAGE_PARAM_SIZE * 4));
+
+   nir_ssa_def *surface_params =
+      nir_imm_int(b, state->first_sampled_image_uniform);
+
+   nir_ssa_def *param_offset =
+      nir_iadd(b, surface_params, tex_offset);
+
+   int dest_size = nir_tex_instr_dest_size(tex);
+
+   nir_ssa_def *srcs[4];
+   for (int i = 0; i < dest_size; i++) {
+      nir_ssa_def *acc = nir_imm_float(b, 0.0f);
+      for (int j = 0; j < dest_size; j++) {
+         nir_ssa_def *p = load_param(b, param_offset, i * 8 + j);
+         nir_ssa_def *t = nir_channel(b, &tex->dest.ssa, j);
+         acc = nir_fadd(b, acc, nir_fmul(b, p, t));
+      }
+      srcs[i] = nir_fadd(b, acc,
+                         load_param(b, param_offset, i * 8 + 4));
+   }
+   nir_ssa_def *swizzled = nir_vec(b, srcs, dest_size);
+
+   nir_ssa_def_rewrite_uses_after(&tex->dest.ssa, nir_src_for_ssa(swizzled),
+                                  swizzled->parent_instr);
+}
+
+static void lower_tex(nir_tex_instr *tex,
+                      struct apply_pipeline_layout_state *state)
 {
    state->builder.cursor = nir_before_instr(&tex->instr);
 
    unsigned plane = tex_instr_get_and_remove_plane_src(tex);
 
+   nir_variable *var =
    lower_tex_deref(tex, nir_tex_src_texture_deref,
                    &tex->texture_index, state);
    tex->texture_index += plane;
@@ -361,11 +435,14 @@ lower_tex(nir_tex_instr *tex, struct apply_pipeline_layout_state *state)
     * about that little optimization so it just needs to be non-zero.
     */
    tex->texture_array_size = 1;
+
+   lower_tex_swizzle(tex, var, state);
 }
 
 static void
 apply_pipeline_layout_block(nir_block *block,
-                            struct apply_pipeline_layout_state *state)
+                            struct apply_pipeline_layout_state *state,
+                            struct anv_pipeline_bind_map *map)
 {
    nir_foreach_instr_safe(instr, block) {
       switch (instr->type) {
@@ -446,6 +523,7 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
       state.set[s].surface_offsets = rzalloc_array(mem_ctx, uint8_t, count);
       state.set[s].sampler_offsets = rzalloc_array(mem_ctx, uint8_t, count);
       state.set[s].image_offsets = rzalloc_array(mem_ctx, uint8_t, count);
+      state.set[s].sampled_image_offsets = rzalloc_array(mem_ctx, uint8_t, count);
    }
 
    nir_foreach_function(function, shader) {
@@ -510,6 +588,11 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
             state.set[set].image_offsets[b] = map->image_count;
             map->image_count += binding->array_size;
          }
+
+         if (binding->stage[stage].sampled_image_index >= 0) {
+            state.set[set].sampled_image_offsets[b] = map->sampled_image_count;
+            map->sampled_image_count += binding->array_size;
+         }
       }
    }
 
@@ -540,6 +623,34 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
       assert(param == prog_data->param + prog_data->nr_params);
 
       shader->num_uniforms += map->image_count * BRW_IMAGE_PARAM_SIZE * 4;
+      assert(shader->num_uniforms == prog_data->nr_params * 4);
+   }
+
+   if (map->sampled_image_count > 0) {
+      assert(map->sampled_image_count <= MAX_SAMPLED_IMAGES);
+      assert(shader->num_uniforms == prog_data->nr_params * 4);
+      state.first_sampled_image_uniform = shader->num_uniforms;
+      uint32_t *param = brw_stage_prog_data_add_params(prog_data,
+                                                       map->sampled_image_count *
+                                                       BRW_SAMPLED_IMAGE_PARAM_SIZE);
+      struct anv_push_constants *null_data = NULL;
+      const struct brw_sampled_image_param *sampled_image_param = null_data->sampled_images;
+      for (uint32_t i = 0; i < map->sampled_image_count; i++) {
+         setup_vec4_uniform_value(param + BRW_SAMPLED_IMAGE_PARAM_SWIZZLE_R,
+                                  (uintptr_t)&sampled_image_param->swizzle_r, 5);
+         setup_vec4_uniform_value(param + BRW_SAMPLED_IMAGE_PARAM_SWIZZLE_G,
+                                  (uintptr_t)&sampled_image_param->swizzle_g, 5);
+         setup_vec4_uniform_value(param + BRW_SAMPLED_IMAGE_PARAM_SWIZZLE_B,
+                                  (uintptr_t)&sampled_image_param->swizzle_b, 5);
+         setup_vec4_uniform_value(param + BRW_SAMPLED_IMAGE_PARAM_SWIZZLE_A,
+                                  (uintptr_t)&sampled_image_param->swizzle_a, 5);
+
+         param += BRW_SAMPLED_IMAGE_PARAM_SIZE;
+         sampled_image_param ++;
+      }
+      assert(param == prog_data->param + prog_data->nr_params);
+
+      shader->num_uniforms += map->sampled_image_count * BRW_SAMPLED_IMAGE_PARAM_SIZE * 4;
       assert(shader->num_uniforms == prog_data->nr_params * 4);
    }
 
@@ -581,7 +692,7 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
 
       nir_builder_init(&state.builder, function->impl);
       nir_foreach_block(block, function->impl)
-         apply_pipeline_layout_block(block, &state);
+         apply_pipeline_layout_block(block, &state, map);
       nir_metadata_preserve(function->impl, nir_metadata_block_index |
                                             nir_metadata_dominance);
    }

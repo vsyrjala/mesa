@@ -131,6 +131,7 @@ anv_shader_bin_write_to_blob(const struct anv_shader_bin *shader,
    ok = blob_write_uint32(blob, shader->bind_map.surface_count);
    ok = blob_write_uint32(blob, shader->bind_map.sampler_count);
    ok = blob_write_uint32(blob, shader->bind_map.image_count);
+   ok = blob_write_uint32(blob, shader->bind_map.sampled_image_count);
    ok = blob_write_bytes(blob, shader->bind_map.surface_to_descriptor,
                                shader->bind_map.surface_count *
                                sizeof(*shader->bind_map.surface_to_descriptor));
@@ -166,6 +167,7 @@ anv_shader_bin_create_from_blob(struct anv_device *device,
    bind_map.surface_count = blob_read_uint32(blob);
    bind_map.sampler_count = blob_read_uint32(blob);
    bind_map.image_count = blob_read_uint32(blob);
+   bind_map.sampled_image_count = blob_read_uint32(blob);
    bind_map.surface_to_descriptor = (void *)
       blob_read_bytes(blob, bind_map.surface_count *
                             sizeof(*bind_map.surface_to_descriptor));

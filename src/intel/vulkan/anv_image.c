@@ -1044,7 +1044,8 @@ anv_image_fill_surface_state(struct anv_device *device,
                              const union isl_color_value *clear_color,
                              enum anv_image_view_state_flags flags,
                              struct anv_surface_state *state_inout,
-                             struct brw_image_param *image_param_out)
+                             struct brw_image_param *image_param_out,
+                             struct brw_sampled_image_param *sampled_image_param_out)
 {
    uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
 
@@ -1227,6 +1228,11 @@ anv_image_fill_surface_state(struct anv_device *device,
       isl_surf_fill_image_param(&device->isl_dev, image_param_out,
                                 &surface->isl, &view);
    }
+   if (sampled_image_param_out) {
+      assert(view_usage == ISL_SURF_USAGE_TEXTURE_BIT);
+      isl_surf_fill_sampled_image_param(&device->isl_dev, sampled_image_param_out,
+                                        &surface->isl, &view);
+   }
 }
 
 static VkImageAspectFlags
@@ -1401,7 +1407,8 @@ anv_CreateImageView(VkDevice _device,
                                       optimal_aux_usage, NULL,
                                       ANV_IMAGE_VIEW_STATE_TEXTURE_OPTIMAL,
                                       &iview->planes[vplane].optimal_sampler_surface_state,
-                                      NULL);
+                                      NULL,
+                                      &iview->planes[vplane].storage_sampled_image_param);
 
          anv_image_fill_surface_state(device, image, 1ULL << iaspect_bit,
                                       &iview->planes[vplane].isl,
@@ -1409,7 +1416,8 @@ anv_CreateImageView(VkDevice _device,
                                       general_aux_usage, NULL,
                                       0,
                                       &iview->planes[vplane].general_sampler_surface_state,
-                                      NULL);
+                                      NULL,
+                                      &iview->planes[vplane].storage_sampled_image_param);
       }
 
       /* NOTE: This one needs to go last since it may stomp isl_view.format */
@@ -1423,7 +1431,8 @@ anv_CreateImageView(VkDevice _device,
                                       ISL_AUX_USAGE_NONE, NULL,
                                       0,
                                       &iview->planes[vplane].storage_surface_state,
-                                      &iview->planes[vplane].storage_image_param);
+                                      &iview->planes[vplane].storage_image_param,
+                                      NULL);
 
          anv_image_fill_surface_state(device, image, 1ULL << iaspect_bit,
                                       &iview->planes[vplane].isl,
@@ -1431,6 +1440,7 @@ anv_CreateImageView(VkDevice _device,
                                       ISL_AUX_USAGE_NONE, NULL,
                                       ANV_IMAGE_VIEW_STATE_STORAGE_WRITE_ONLY,
                                       &iview->planes[vplane].writeonly_storage_surface_state,
+                                      NULL,
                                       NULL);
       }
 

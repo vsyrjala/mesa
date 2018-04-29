@@ -322,3 +322,30 @@ isl_buffer_fill_image_param(const struct isl_device *dev,
    param->stride[0] = isl_format_get_layout(format)->bpb / 8;
    param->size[0] = size / param->stride[0];
 }
+
+static const float swizzles[][5]  = {
+      [ISL_CHANNEL_SELECT_ZERO]  = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, },
+      [ISL_CHANNEL_SELECT_ONE]   = { 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, },
+      [ISL_CHANNEL_SELECT_RED]   = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, },
+      [ISL_CHANNEL_SELECT_GREEN] = { 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, },
+      [ISL_CHANNEL_SELECT_BLUE]  = { 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, },
+      [ISL_CHANNEL_SELECT_ALPHA] = { 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, },
+};
+
+static void set_swizzle(float swizzle[5],
+                        enum isl_channel_select chan)
+{
+   memcpy(swizzle, swizzles[chan], sizeof(swizzles[chan]));
+}
+
+void
+isl_surf_fill_sampled_image_param(const struct isl_device *dev,
+                                  struct brw_sampled_image_param *param,
+                                  const struct isl_surf *surf,
+                                  const struct isl_view *view)
+{
+   set_swizzle(param->swizzle_r, view->swizzle.r);
+   set_swizzle(param->swizzle_g, view->swizzle.g);
+   set_swizzle(param->swizzle_b, view->swizzle.b);
+   set_swizzle(param->swizzle_a, view->swizzle.a);
+}

@@ -1282,6 +1282,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                          &clear_color,
                                          0,
                                          &state->attachments[i].color,
+                                         NULL,
                                          NULL);
 
             add_surface_state_relocs(cmd_buffer, state->attachments[i].color);
@@ -1301,6 +1302,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                          &clear_color,
                                          0,
                                          &state->attachments[i].input,
+                                         NULL,
                                          NULL);
 
             add_surface_state_relocs(cmd_buffer, state->attachments[i].input);
@@ -2050,8 +2052,17 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
       cmd_buffer->state.push_constants_dirty |= 1 << stage;
    }
+   if (map->sampled_image_count > 0) {
+      VkResult result =
+         anv_cmd_buffer_ensure_push_constant_field(cmd_buffer, stage, sampled_images);
+      if (result != VK_SUCCESS)
+         return result;
+
+      cmd_buffer->state.push_constants_dirty |= 1 << stage;
+   }
 
    uint32_t image = 0;
+   uint32_t sampled_image = 0;
    for (uint32_t s = 0; s < map->surface_count; s++) {
       struct anv_pipeline_binding *binding = &map->surface_to_descriptor[s];
 
@@ -2121,6 +2132,13 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          surface_state = sstate.state;
          assert(surface_state.alloc_size);
          add_surface_state_relocs(cmd_buffer, sstate);
+
+         assert(sampled_image < MAX_SAMPLED_IMAGES);
+
+         struct brw_sampled_image_param *sampled_image_param =
+            &cmd_buffer->state.push_constants[stage]->sampled_images[sampled_image++];
+
+         *sampled_image_param = desc->image_view->planes[binding->plane].storage_sampled_image_param;
          break;
       }
       case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
@@ -2219,6 +2237,7 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       bt_map[bias + s] = surface_state.offset + state_offset;
    }
    assert(image == map->image_count);
+   assert(sampled_image == map->sampled_image_count);
 
  out:
    anv_state_flush(cmd_buffer->device, *bt_state);

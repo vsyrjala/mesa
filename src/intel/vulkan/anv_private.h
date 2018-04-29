@@ -158,6 +158,7 @@ struct gen_l3_config;
 #define MAX_PUSH_CONSTANTS_SIZE 128
 #define MAX_DYNAMIC_BUFFERS 16
 #define MAX_IMAGES 8
+#define MAX_SAMPLED_IMAGES 32
 #define MAX_PUSH_DESCRIPTORS 32 /* Minimum requirement */
 
 /* The kernel relocation API has a limitation of a 32-bit delta value
@@ -1452,6 +1453,9 @@ struct anv_descriptor_set_binding_layout {
 
       /* Index into the image table for the associated image */
       int16_t image_index;
+
+      /* Index into the sampled image table for the associated sampled image */
+      int16_t sampled_image_index;
    } stage[MESA_SHADER_STAGES];
 
    /* Immutable samplers (or NULL if no immutable samplers) */
@@ -1536,6 +1540,7 @@ struct anv_buffer_view {
    struct anv_state writeonly_storage_surface_state;
 
    struct brw_image_param storage_image_param;
+   struct brw_sampled_image_param storage_sampled_image_param;
 };
 
 struct anv_push_descriptor_set {
@@ -1868,6 +1873,9 @@ struct anv_push_constants {
 
    /* Image data for image_load_store on pre-SKL */
    struct brw_image_param images[MAX_IMAGES];
+
+   /* Sampled image data for texture swizzle pre-BDW */
+   struct brw_sampled_image_param sampled_images[MAX_SAMPLED_IMAGES];
 };
 
 struct anv_dynamic_state {
@@ -2372,6 +2380,7 @@ struct anv_pipeline_bind_map {
    uint32_t surface_count;
    uint32_t sampler_count;
    uint32_t image_count;
+   uint32_t sampled_image_count;
 
    struct anv_pipeline_binding *                surface_to_descriptor;
    struct anv_pipeline_binding *                sampler_to_descriptor;
@@ -3040,6 +3049,7 @@ struct anv_image_view {
       struct anv_surface_state writeonly_storage_surface_state;
 
       struct brw_image_param storage_image_param;
+      struct brw_sampled_image_param storage_sampled_image_param;
    } planes[3];
 };
 
@@ -3057,7 +3067,8 @@ void anv_image_fill_surface_state(struct anv_device *device,
                                   const union isl_color_value *clear_color,
                                   enum anv_image_view_state_flags flags,
                                   struct anv_surface_state *state_inout,
-                                  struct brw_image_param *image_param_out);
+                                  struct brw_image_param *image_param_out,
+                                  struct brw_sampled_image_param *sampled_image_param_out);
 
 struct anv_image_create_info {
    const VkImageCreateInfo *vk_info;

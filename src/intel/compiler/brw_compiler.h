@@ -470,6 +470,20 @@ struct brw_image_param {
    uint32_t swizzling[2];
 };
 
+#define BRW_SAMPLED_IMAGE_PARAM_SWIZZLE_R	0
+#define BRW_SAMPLED_IMAGE_PARAM_SWIZZLE_G	8
+#define BRW_SAMPLED_IMAGE_PARAM_SWIZZLE_B	16
+#define BRW_SAMPLED_IMAGE_PARAM_SWIZZLE_A	24
+#define BRW_SAMPLED_IMAGE_PARAM_SIZE		32
+
+struct brw_sampled_image_param {
+   /** Surface swizzle. */
+   float swizzle_r[5];
+   float swizzle_g[5];
+   float swizzle_b[5];
+   float swizzle_a[5];
+};
+
 /** Max number of render targets in a shader */
 #define BRW_MAX_DRAW_BUFFERS 8
 
