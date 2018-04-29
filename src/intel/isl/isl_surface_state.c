@@ -477,8 +477,6 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
    s.ShaderChannelSelectGreen = (enum GENX(ShaderChannelSelect)) info->view->swizzle.g;
    s.ShaderChannelSelectBlue = (enum GENX(ShaderChannelSelect)) info->view->swizzle.b;
    s.ShaderChannelSelectAlpha = (enum GENX(ShaderChannelSelect)) info->view->swizzle.a;
-#else
-   assert(isl_swizzle_is_identity(info->view->swizzle));
 #endif
 
    s.SurfaceBaseAddress = info->address;

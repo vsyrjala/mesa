@@ -133,6 +133,7 @@ VkResult anv_CreateDescriptorSetLayout(
    uint32_t sampler_count[MESA_SHADER_STAGES] = { 0, };
    uint32_t surface_count[MESA_SHADER_STAGES] = { 0, };
    uint32_t image_count[MESA_SHADER_STAGES] = { 0, };
+   uint32_t sampled_image_count[MESA_SHADER_STAGES] = { 0, };
    uint32_t buffer_count = 0;
    uint32_t dynamic_offset_count = 0;
 
@@ -169,6 +170,18 @@ VkResult anv_CreateDescriptorSetLayout(
          anv_foreach_stage(s, binding->stageFlags) {
             set_layout->binding[b].stage[s].sampler_index = sampler_count[s];
             sampler_count[s] += binding->descriptorCount;
+         }
+         break;
+      default:
+         break;
+      }
+
+      switch (binding->descriptorType) {
+      case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+      case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+         anv_foreach_stage(s, binding->stageFlags) {
+            set_layout->binding[b].stage[s].sampled_image_index = sampled_image_count[s];
+            sampled_image_count[s] += binding->descriptorCount;
          }
          break;
       default:
