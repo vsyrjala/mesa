@@ -37,6 +37,7 @@ struct apply_pipeline_layout_state {
       uint8_t *surface_offsets;
       uint8_t *sampler_offsets;
       uint8_t *image_offsets;
+      uint8_t *sampled_image_offsets;
    } set[MAX_SETS];
 };
 
@@ -258,14 +259,13 @@ load_param(nir_builder *build, nir_ssa_def *offset, int index)
 
 static void lower_tex_swizzle(nir_builder *b,
                               nir_tex_instr *tex,
-                              struct anv_pipeline_bind_map *map)
+                              struct anv_pipeline_bind_map *map,
+                              unsigned texture)
 {
    assert(tex->dest.is_ssa);
    assert(nir_tex_instr_dest_size(tex) == 4);
 
    b->cursor = nir_after_instr(&tex->instr);
-
-   unsigned texture = tex->texture_index;
 
    nir_ssa_def *tex_offset;
    int i = nir_tex_instr_src_index(tex, nir_tex_src_texture_offset);
@@ -348,7 +348,8 @@ static void lower_tex(nir_tex_instr *tex,
    tex->texture = NULL;
    tex->sampler = NULL;
 
-   lower_tex_swizzle(&state->builder, tex, map);
+   lower_tex_swizzle(&state->builder, tex, map,
+                     state->set[set].sampled_image_offsets[binding]);
 }
 
 static void
@@ -415,6 +416,7 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
       state.set[s].surface_offsets = rzalloc_array(mem_ctx, uint8_t, count);
       state.set[s].sampler_offsets = rzalloc_array(mem_ctx, uint8_t, count);
       state.set[s].image_offsets = rzalloc_array(mem_ctx, uint8_t, count);
+      state.set[s].sampled_image_offsets = rzalloc_array(mem_ctx, uint8_t, count);
    }
 
    nir_foreach_function(function, shader) {
@@ -451,6 +453,7 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
    unsigned surface = 0;
    unsigned sampler = 0;
    unsigned image = 0;
+   unsigned sampled_image = 0;
    for (uint32_t set = 0; set < layout->num_sets; set++) {
       struct anv_descriptor_set_layout *set_layout = layout->set[set].layout;
 
@@ -493,6 +496,11 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
          if (binding->stage[stage].image_index >= 0) {
             state.set[set].image_offsets[b] = image;
             image += binding->array_size;
+         }
+
+         if (binding->stage[stage].sampled_image_index >= 0) {
+            state.set[set].sampled_image_offsets[b] = sampled_image;
+            sampled_image += binding->array_size;
          }
       }
    }
