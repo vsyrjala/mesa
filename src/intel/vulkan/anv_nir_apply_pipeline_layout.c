@@ -263,7 +263,6 @@ static void lower_tex_swizzle(nir_builder *b,
                               unsigned texture)
 {
    assert(tex->dest.is_ssa);
-   assert(nir_tex_instr_dest_size(tex) == 4);
 
    /* FIXME: correct? */
    if (tex->op >= nir_texop_txs)
@@ -290,11 +289,13 @@ static void lower_tex_swizzle(nir_builder *b,
    nir_ssa_def *param_offset =
       nir_iadd(b, surface_params, tex_offset);
 
+   int dest_size = nir_tex_instr_dest_size(tex);
+
    nir_ssa_def *srcs[4];
    nir_ssa_def *adds[4];
-   for (int i = 0; i < 4; i++) {
+   for (int i = 0; i < dest_size; i++) {
       nir_ssa_def *acc = nir_imm_float(b, 0.0f);
-      for (int j = 0; j < 4; j++) {
+      for (int j = 0; j < dest_size; j++) {
          nir_ssa_def *p = load_param(b, param_offset, i * 8 + j);
          nir_ssa_def *t = nir_channel(b, &tex->dest.ssa, j);
          acc = nir_fadd(b, acc, nir_fmul(b, p, t));
@@ -302,8 +303,8 @@ static void lower_tex_swizzle(nir_builder *b,
       srcs[i] = acc;
       adds[i] = load_param(b, param_offset, i * 8 + 4);
    }
-   nir_ssa_def *swizzled = nir_fadd(b, nir_vec(b, srcs, 4),
-                                    nir_vec(b, adds, 4));
+   nir_ssa_def *swizzled = nir_fadd(b, nir_vec(b, srcs, dest_size),
+                                    nir_vec(b, adds, dest_size));
 
    nir_ssa_def_rewrite_uses_after(&tex->dest.ssa, nir_src_for_ssa(swizzled),
                                   swizzled->parent_instr);
