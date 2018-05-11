@@ -265,6 +265,10 @@ static void lower_tex_swizzle(nir_builder *b,
    assert(tex->dest.is_ssa);
    assert(nir_tex_instr_dest_size(tex) == 4);
 
+   /* FIXME: correct? */
+   if (tex->op >= nir_texop_txs)
+      return;
+
    b->cursor = nir_after_instr(&tex->instr);
 
    nir_ssa_def *tex_offset;
